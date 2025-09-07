@@ -17,7 +17,7 @@ import { useTranslation } from "react-i18next";
 export default function MultiDaysScreen({ navigation, route }) {
   const { selectedDates = [], onSelect } = route.params;
   const { isDarkMode } = useSettings();
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
 
   const bgColor = isDarkMode ? "#121212" : "#f0f2f5";
   const infoColor = isDarkMode ? "#aaa" : "#555";
@@ -43,16 +43,22 @@ export default function MultiDaysScreen({ navigation, route }) {
   };
 
   const handleDone = () => {
-    const selected = Object.keys(markedDates).map(d => new Date(d));
+    // Chuyển sang Date VN và sắp xếp
+    const selected = Object.keys(markedDates)
+      .map(d => {
+        const dt = new Date(d + "T00:00:00"); // đảm bảo giờ bắt đầu 00:00
+        const offset = 7 * 60; // UTC+7
+        return new Date(dt.getTime() + offset * 60000);
+      })
+      .sort((a, b) => a - b);
+
     if (onSelect) onSelect(selected);
     navigation.goBack();
   };
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: bgColor }]}>
-      <StatusBar
-        barStyle={isDarkMode ? "light-content" : "dark-content"}
-      />
+      <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} />
 
       <Text style={[styles.info, { color: infoColor }]}>
         {t("selectMultipleDays") || "Chọn nhiều ngày"}
@@ -72,7 +78,10 @@ export default function MultiDaysScreen({ navigation, route }) {
           textMonthFontWeight: "600",
           dayTextColor: textColor,
         }}
-        style={[styles.calendar, { backgroundColor: calendarBg, shadowColor: "#000", shadowOpacity: 0.1, shadowRadius: 4, elevation: 3 }]}
+        style={[
+          styles.calendar,
+          { backgroundColor: calendarBg, shadowColor: "#000", shadowOpacity: 0.1, shadowRadius: 4, elevation: 3 },
+        ]}
       />
 
       <TouchableOpacity style={styles.doneBtnContainer} onPress={handleDone}>

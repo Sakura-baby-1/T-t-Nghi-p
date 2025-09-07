@@ -1,19 +1,58 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
-  View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Switch,
-  Alert, KeyboardAvoidingView, Platform, SafeAreaView, StatusBar
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  ScrollView,
+  Switch,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  SafeAreaView,
+  StatusBar,
 } from "react-native";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
-import { collection, addDoc, query, where, getDocs } from "firebase/firestore";
+import { collection, addDoc, query, where, getDocs,doc,setDoc } from "firebase/firestore";
 import { db, auth } from "../firebase";
 import { useSettings } from "../context/SettingsContext";
 import * as Notifications from "expo-notifications";
 import * as Device from "expo-device";
+import { generateRepeatDates } from "../utils/repeatEvents";
 
 const offsetMap = { "1m": 1, "5m": 5, "10m": 10, "30m": 30, "1h": 60, "2h": 120, "1d": 1440 };
+const offsetLabels = {
+  "Không thông báo": "Không thông báo",
+  "1m": "1 phút trước",
+  "5m": "5 phút trước",
+  "10m": "10 phút trước",
+  "30m": "30 phút trước",
+  "1h": "1 giờ trước",
+  "2h": "2 giờ trước",
+  "1d": "1 ngày trước",
+};
 
+// Hàm format ngày giờ đẹp hơn
+const formatDateTime = (date, locale = "vi-VN") => {
+  const time = new Intl.DateTimeFormat(locale, {
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+
+  const day = new Intl.DateTimeFormat(locale, {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  }).format(date);
+
+  return `${time}, ${day}`;
+};
+
+
+// Lên lịch thông báo
 const scheduleEventNotification = async (eventTime, event) => {
   if (!Device.isDevice || event.thongBao === "Không thông báo") return;
 
@@ -22,12 +61,15 @@ const scheduleEventNotification = async (eventTime, event) => {
     triggerTime = new Date(triggerTime.getTime() - offsetMap[event.thongBao] * 60000);
   }
 
+  // Nếu thời gian đã qua thì không tạo thông báo
+  if (triggerTime < new Date()) return;
+
   await Notifications.scheduleNotificationAsync({
     content: {
       title: "Sự kiện sắp tới!",
       body: event.tieuDe,
       sound: "default",
-      data: { event }, // gửi toàn bộ dữ liệu event
+      data: { event },
     },
     trigger: triggerTime,
   });
@@ -56,6 +98,8 @@ export default function TaoSuKienScreen({ navigation, route }) {
   const [trungTen, setTrungTen] = useState(false);
   const [thongBao, setThongBao] = useState("Không thông báo");
 
+  // Debounce kiểm tra trùng tên
+  const debounceRef = useRef(null);
   const kiemTraTrungTen = async (ten, lichChon) => {
     if (!auth.currentUser || !ten?.trim()) {
       setTrungTen(false);
@@ -77,51 +121,84 @@ export default function TaoSuKienScreen({ navigation, route }) {
   };
 
   useEffect(() => {
-    kiemTraTrungTen(tieuDe, lich);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      kiemTraTrungTen(tieuDe, lich);
+    }, 500);
   }, [tieuDe, lich]);
 
   const luuSuKien = async () => {
-    if (!tieuDe.trim()) return Alert.alert("Thông báo", "Tiêu đề không được để trống.");
-    if (ngayKetThuc < ngayBatDau) return Alert.alert("Lỗi", "Ngày kết thúc phải sau ngày bắt đầu.");
-    if (trungTen) return Alert.alert("Lỗi", "Tên sự kiện đã tồn tại trong lịch này.");
+  if (!tieuDe.trim()) return Alert.alert("Thông báo", "Tiêu đề không được để trống.");
+  if (ngayKetThuc < ngayBatDau) return Alert.alert("Lỗi", "Ngày kết thúc phải sau ngày bắt đầu.");
+  if (trungTen) return Alert.alert("Lỗi", "Tên Lịch đã tồn tại trong lịch này.");
+  if (url && !/^https?:\/\//i.test(url)) return Alert.alert("Lỗi", "URL không hợp lệ.");
 
-    try {
-      const dsNgay = nhieuNgay.length > 0 ? nhieuNgay : [ngayBatDau];
+  try {
+    let dsNgay = [];
 
-      for (let d of dsNgay) {
-        const batDau = new Date(d);
-        const ketThuc = new Date(d);
+    if (lapLai !== "Không lặp lại") {
+      // Nếu chọn lặp lại → generate ngày theo lặp
+      dsNgay = generateRepeatDates(ngayBatDau, lapLai, 30);
+    } else if (nhieuNgay.length > 0) {
+      // Nếu chọn nhiều ngày → lấy ngày người dùng chọn
+      dsNgay = nhieuNgay;
+    } else {
+      dsNgay = [ngayBatDau];
+    }
+
+    dsNgay.sort((a, b) => new Date(a) - new Date(b));
+
+    for (let d of dsNgay) {
+      const batDau = new Date(d);
+      const ketThuc = new Date(d);
+
+      if (caNgay) {
+        batDau.setHours(0, 0, 0, 0);
+        ketThuc.setHours(23, 59, 59, 999);
+      } else {
         batDau.setHours(ngayBatDau.getHours(), ngayBatDau.getMinutes(), 0, 0);
         ketThuc.setHours(ngayKetThuc.getHours(), ngayKetThuc.getMinutes(), 0, 0);
 
-        const eventData = {
-          userId: auth.currentUser.uid,
-          tieuDe,
-          lich: { name: lich.name, color: lich.color },
-          caNgay,
-          ngayBatDau: batDau,
-          ngayKetThuc: ketThuc,
-          lapLai,
-          thongBao,
-          diaDiem,
-          url,
-          ghiChu,
-        };
-
-        await addDoc(collection(db, "events"), eventData);
-
-        // Lên lịch notification
-        await scheduleEventNotification(batDau, eventData);
+        if (batDau < new Date()) 
+          return Alert.alert("Lỗi", "Thời gian bắt đầu phải sau hiện tại.");
       }
 
-      if (route.params?.onGoBack) route.params.onGoBack();
-      Alert.alert("Thành công", "Sự kiện đã được lưu.");
-      navigation.goBack();
-    } catch (error) {
-      console.error("Lưu sự kiện lỗi:", error);
-      Alert.alert("Lỗi", "Không thể lưu sự kiện.");
+      const eventData = {
+        userId: auth.currentUser.uid,
+        tieuDe,
+        lich: { name: lich.name, color: lich.color },
+        caNgay,
+        ngayBatDau: batDau,
+        ngayKetThuc: ketThuc,
+        nhieuNgay: dsNgay.map(d => new Date(d).toISOString()),
+        lapLai,
+        thongBao,
+        diaDiem,
+        url,
+        ghiChu,
+        title_lower: tieuDe.toLowerCase(),
+        calendar_name_lower: lich.name.toLowerCase(),
+      };
+
+      // Tạo docId duy nhất cho từng ngày → tránh bị trùng khi lặp lại
+      const docId = `${lich.name}_${tieuDe}_${batDau.toISOString().slice(0,10)}`;
+      await setDoc(doc(db, "events", docId), eventData);
+
+      // Tạo thông báo cho từng ngày
+      await scheduleEventNotification(batDau, eventData);
     }
-  };
+
+    if (route.params?.onGoBack) route.params.onGoBack();
+    Alert.alert("Thành công", "Lịch đã được lưu.");
+    navigation.goBack();
+
+  } catch (error) {
+    console.error("Lưu Lịch lỗi:", error);
+    Alert.alert("Lỗi", "Không thể lưu Lịch.");
+  }
+};
+
+
 
   const thayDoiNgay = (e, ngayChon) => {
     if (!ngayChon) return setShowPicker({ visible: false, type: "" });
@@ -135,6 +212,9 @@ export default function TaoSuKienScreen({ navigation, route }) {
     setShowPicker({ visible: false, type: "" });
   };
 
+
+
+
   const bgColor = isDarkMode ? "#0f1720" : "#f7fbff";
 
   return (
@@ -142,7 +222,8 @@ export default function TaoSuKienScreen({ navigation, route }) {
       <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} />
       <LinearGradient
         colors={isDarkMode ? ["#0b1220", "#1e293b"] : ["#4facfe", "#8f94fb"]}
-        start={[0, 0]} end={[1, 1]}
+        start={[0, 0]}
+        end={[1, 1]}
         style={styles.headerGradient}
       >
         <View style={styles.headerRow}>
@@ -151,7 +232,7 @@ export default function TaoSuKienScreen({ navigation, route }) {
             <Text style={styles.iconText}>Hủy</Text>
           </TouchableOpacity>
           <View style={styles.headerTitleBox}>
-            <Text style={styles.headerTitle}>Tạo sự kiện</Text>
+            <Text style={styles.headerTitle}>Tạo Lịch</Text>
           </View>
           <TouchableOpacity
             style={[styles.iconBtn, !tieuDe.trim() && { opacity: 0.6 }]}
@@ -170,115 +251,121 @@ export default function TaoSuKienScreen({ navigation, route }) {
         keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
       >
         <ScrollView contentContainerStyle={styles.container}>
-          {/* Cảnh báo trùng tên */}
           {trungTen && (
             <View style={styles.warningBox}>
               <Ionicons name="warning" size={16} color="#b71c1c" />
-              <Text style={styles.warningText}>Tên sự kiện đã tồn tại trong lịch này</Text>
+              <Text style={styles.warningText}>Tên Lịch đã tồn tại</Text>
             </View>
           )}
 
-            {/* Chọn loại lịch */}
+          {/* Chọn loại lịch */}
+          <TouchableOpacity
+            style={[styles.rowCard]}
+            onPress={() => navigation.navigate("ManageCalendarsScreen", { selected: lich, onSelect: setLich })}
+          >
+            <View style={styles.rowLeft}>
+              <View style={[styles.colorDot, { backgroundColor: lich.color }]} />
+              <Text style={styles.rowTitle}>{lich.name}</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="#9aa0b4" />
+          </TouchableOpacity>
+
+          {/* Tiêu đề sự kiện */}
+          <View style={[styles.card, { backgroundColor: isDarkMode ? "#0f1724" : "#fff" }]}>
+            <Text style={[styles.label, { color: isDarkMode ? "#cbd5e1" : "#44546a" }]}>Tiêu đề Lịch</Text>
+            <TextInput
+              style={[styles.input, { color: isDarkMode ? "#fff" : "#222" }]}
+              placeholder="Nhập tiêu đề"
+              placeholderTextColor={isDarkMode ? "#6b7280" : "#9aa0b4"}
+              value={tieuDe}
+              onChangeText={setTieuDe}
+              autoFocus
+            />
+          </View>
+
+          {/* Ngày / Thời gian */}
+          <View style={[styles.card, { backgroundColor: isDarkMode ? "#0f1724" : "#fff" }]}>
+            <View style={styles.rowSplit}>
+              <Text style={[styles.labelSmall, { color: isDarkMode ? "#cbd5e1" : "#44546a" }]}>Bắt đầu</Text>
+              <TouchableOpacity onPress={() => setShowPicker({ visible: true, type: "start" })}>
+                <Text style={styles.timeText}>{formatDateTime(ngayBatDau, language)}</Text>
+              </TouchableOpacity>
+            </View>
+            <View style={styles.rowSplit}>
+              <Text style={[styles.labelSmall, { color: isDarkMode ? "#cbd5e1" : "#44546a" }]}>Kết thúc</Text>
+              <TouchableOpacity onPress={() => setShowPicker({ visible: true, type: "end" })}>
+                <Text style={styles.timeText}>{formatDateTime(ngayKetThuc, language)}</Text>
+              </TouchableOpacity>
+            </View>
+            <View style={styles.rowSplit}>
+              <Text style={[styles.labelSmall, { color: isDarkMode ? "#cbd5e1" : "#44546a" }]}>Cả ngày</Text>
+              <Switch value={caNgay} onValueChange={setCaNgay} />
+            </View>
+          </View>
+
+          {/* Lặp lại / Thông báo / Nhiều ngày */}
+          <View style={[styles.card, { backgroundColor: isDarkMode ? "#0f1724" : "#fff" }]}>
             <TouchableOpacity
-              style={[styles.rowCard]}
-              onPress={() => navigation.navigate("ManageCalendarsScreen", { selected: lich, onSelect: setLich })}
+              style={styles.rowOption}
+              onPress={() => navigation.navigate("RepeatScreen", { selected: lapLai, onSelect: setLapLai })}
             >
-              <View style={styles.rowLeft}>
-                <View style={[styles.colorDot, { backgroundColor: lich.color }]} />
-                <Text style={styles.rowTitle}>{lich.name}</Text>
+              <Text style={styles.rowTitle}>Lặp lại</Text>
+              <View style={styles.rowRightBox}>
+                <Text style={styles.rowSub}>{lapLai}</Text>
+                <Ionicons name="chevron-forward" size={18} color="#9aa0b4" />
               </View>
-              <Ionicons name="chevron-forward" size={20} color="#9aa0b4" />
             </TouchableOpacity>
 
-            {/* Tiêu đề sự kiện */}
-            <View style={[styles.card, { backgroundColor: isDarkMode ? "#0f1724" : "#fff" }]}>
-              <Text style={[styles.label, { color: isDarkMode ? "#cbd5e1" : "#44546a" }]}>Tiêu đề sự kiện</Text>
-              <TextInput
-                style={[styles.input, { color: isDarkMode ? "#fff" : "#222" }]}
-                placeholder="Nhập tiêu đề"
-                placeholderTextColor={isDarkMode ? "#6b7280" : "#9aa0b4"}
-                value={tieuDe}
-                onChangeText={setTieuDe}
-                autoFocus
-              />
-            </View>
-
-            {/* Ngày / Thời gian */}
-            <View style={[styles.card, { backgroundColor: isDarkMode ? "#0f1724" : "#fff" }]}>
-              <View style={styles.rowSplit}>
-                <Text style={[styles.labelSmall, { color: isDarkMode ? "#cbd5e1" : "#44546a" }]}>Bắt đầu</Text>
-                <TouchableOpacity onPress={() => setShowPicker({ visible: true, type: "start" })}>
-                  <Text style={styles.timeText}>{ngayBatDau.toLocaleString(language)}</Text>
-                </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.rowOption}
+              onPress={() =>
+                navigation.navigate("NotificationScreen", {
+                  selected: thongBao,
+                  onSelect: setThongBao,
+                  eventTime: ngayBatDau,
+                  eventName: tieuDe,
+                })
+              }
+            >
+              <Text style={styles.rowTitle}>Thông báo</Text>
+              <View style={styles.rowRightBox}>
+                <Text style={styles.rowSub}>{offsetLabels[thongBao]}</Text>
+                <Ionicons name="chevron-forward" size={18} color="#9aa0b4" />
               </View>
-              <View style={styles.rowSplit}>
-                <Text style={[styles.labelSmall, { color: isDarkMode ? "#cbd5e1" : "#44546a" }]}>Kết thúc</Text>
-                <TouchableOpacity onPress={() => setShowPicker({ visible: true, type: "end" })}>
-                  <Text style={styles.timeText}>{ngayKetThuc.toLocaleString(language)}</Text>
-                </TouchableOpacity>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.rowOption}
+              onPress={() => navigation.navigate("MultiDayScreen", { selectedDates: nhieuNgay, onSelect: setNhieuNgay })}
+            >
+              <Text style={styles.rowTitle}>Nhiều ngày</Text>
+              <View style={styles.rowRightBox}>
+                <Text style={styles.rowSub}>{nhieuNgay.length === 0 ? "Không" : `${nhieuNgay.length} ngày`}</Text>
+                <Ionicons name="chevron-forward" size={18} color="#9aa0b4" />
               </View>
-              <View style={styles.rowSplit}>
-                <Text style={[styles.labelSmall, { color: isDarkMode ? "#cbd5e1" : "#44546a" }]}>Cả ngày</Text>
-                <Switch value={caNgay} onValueChange={setCaNgay} />
-              </View>
-            </View>
+            </TouchableOpacity>
+          </View>
 
-            {/* Lặp lại / Thông báo / Nhiều ngày */}
-            <View style={[styles.card, { backgroundColor: isDarkMode ? "#0f1724" : "#fff" }]}>
-              <TouchableOpacity style={styles.rowOption} onPress={() => navigation.navigate("RepeatScreen", { selected: lapLai, onSelect: setLapLai })}>
-                <Text style={styles.rowTitle}>Lặp lại</Text>
-                <View style={styles.rowRightBox}>
-                  <Text style={styles.rowSub}>{lapLai}</Text>
-                  <Ionicons name="chevron-forward" size={18} color="#9aa0b4" />
-                </View>
-              </TouchableOpacity>
+          {/* Thông tin chi tiết */}
+          <View style={[styles.card, { backgroundColor: isDarkMode ? "#0f1724" : "#fff" }]}>
+            <Text style={[styles.label, { color: isDarkMode ? "#cbd5e1" : "#44546a" }]}>Địa điểm</Text>
+            <TextInput
+              style={[styles.inputSmall, { color: isDarkMode ? "#fff" : "#222" }]}
+              value={diaDiem}
+              onChangeText={setDiaDiem}
+              placeholder="Nhập địa điểm"
+              placeholderTextColor={isDarkMode ? "#6b7280" : "#9aa0b4"}
+            />
 
-              <TouchableOpacity
-  style={styles.rowOption}
-  onPress={() =>
-    navigation.navigate("NotificationScreen", {
-      selected: thongBao,
-      onSelect: setThongBao,
-      eventTime: ngayBatDau,
-      eventName: tieuDe,
-    })
-  }
->
-  <Text style={styles.rowTitle}>Thông báo</Text>
-  <View style={styles.rowRightBox}>
-    <Text style={styles.rowSub}>{thongBao}</Text>
-    <Ionicons name="chevron-forward" size={18} color="#9aa0b4" />
-  </View>
-</TouchableOpacity>
+            <Text style={[styles.label, { color: isDarkMode ? "#cbd5e1" : "#44546a", marginTop: 8 }]}>URL</Text>
+            <TextInput
+              style={[styles.inputSmall, { color: isDarkMode ? "#fff" : "#222" }]}
+              value={url}
+              onChangeText={setUrl}
+              placeholder="Nhập URL"
+              placeholderTextColor={isDarkMode ? "#6b7280" : "#9aa0b4"}
+            />
 
-              <TouchableOpacity style={styles.rowOption} onPress={() => navigation.navigate("MultiDayScreen", { selectedDates: nhieuNgay, onSelect: setNhieuNgay })}>
-                <Text style={styles.rowTitle}>Nhiều ngày</Text>
-                <View style={styles.rowRightBox}>
-                  <Text style={styles.rowSub}>{nhieuNgay.length === 0 ? "Không" : `${nhieuNgay.length} ngày`}</Text>
-                  <Ionicons name="chevron-forward" size={18} color="#9aa0b4" />
-                </View>
-              </TouchableOpacity>
-            </View>
-
-            {/* Thông tin chi tiết */}
-            <View style={[styles.card, { backgroundColor: isDarkMode ? "#0f1724" : "#fff" }]}>
-              <Text style={[styles.label, { color: isDarkMode ? "#cbd5e1" : "#44546a" }]}>Địa điểm</Text>
-              <TextInput
-                style={[styles.inputSmall, { color: isDarkMode ? "#fff" : "#222" }]}
-                value={diaDiem}
-                onChangeText={setDiaDiem}
-                placeholder="Nhập địa điểm"
-                placeholderTextColor={isDarkMode ? "#6b7280" : "#9aa0b4"}
-              />
-
-              <Text style={[styles.label, { color: isDarkMode ? "#cbd5e1" : "#44546a", marginTop: 8 }]}>URL</Text>
-              <TextInput
-                style={[styles.inputSmall, { color: isDarkMode ? "#fff" : "#222" }]}
-                value={url}
-                onChangeText={setUrl}
-                placeholder="Nhập URL"
-                placeholderTextColor={isDarkMode ? "#6b7280" : "#9aa0b4"}
-              />
 
               <Text style={[styles.label, { color: isDarkMode ? "#cbd5e1" : "#44546a", marginTop: 8 }]}>Ghi chú</Text>
               <TextInput

@@ -16,6 +16,7 @@ import { useNavigation } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import moment from "moment";
 
+import { generateRepeatDates } from "../utils/repeatEvents";
 // --- Ngày lễ cố định ---
 const holidays = {
   "2025-01-01": "Tết Dương lịch",
@@ -62,7 +63,7 @@ export default function EventsCalendarScreen() {
     }
   };
 
-  useEffect(() => {
+useEffect(() => {
   if (!auth.currentUser) return;
 
   const q = query(
@@ -74,7 +75,7 @@ export default function EventsCalendarScreen() {
     const marked = {};
     const byDate = {};
 
-    const now = new Date(); // thời gian hiện tại
+    const now = new Date();
 
     snapshot.docs.forEach((doc) => {
       const data = doc.data();
@@ -84,21 +85,29 @@ export default function EventsCalendarScreen() {
         : data.ngayBatDau;
       if (!start) return;
 
-      // chỉ lấy sự kiện từ hiện tại trở đi
+      // bỏ qua sự kiện quá khứ
       if (start < now) return;
 
-      const dateStr = moment(start).format("YYYY-MM-DD");
+      // --- xử lý lặp lại ---
+      let repeatDates = [start];
+      if (data.lapLai && data.lapLai !== "Không lặp lại") {
+        repeatDates = generateRepeatDates(start, data.lapLai);
+      }
 
-      // đánh dấu ngày có sự kiện
-      if (!marked[dateStr]) marked[dateStr] = { dots: [] };
-      marked[dateStr].dots.push({
-        key: doc.id,
-        color: getEventColor(data.lich?.name),
+      repeatDates.forEach((dateItem) => {
+        const dateStr = moment(dateItem).format("YYYY-MM-DD");
+
+        // đánh dấu ngày có sự kiện
+        if (!marked[dateStr]) marked[dateStr] = { dots: [] };
+        marked[dateStr].dots.push({
+          key: doc.id + "-" + dateStr,
+          color: getEventColor(data.lich?.name),
+        });
+
+        // group theo ngày
+        if (!byDate[dateStr]) byDate[dateStr] = [];
+        byDate[dateStr].push({ id: doc.id, ...data });
       });
-
-      // group theo ngày
-      if (!byDate[dateStr]) byDate[dateStr] = [];
-      byDate[dateStr].push({ id: doc.id, ...data });
     });
 
     setEvents(marked);
@@ -107,6 +116,8 @@ export default function EventsCalendarScreen() {
 
   return () => unsubscribe();
 }, []);
+
+ 
 
   // --- Click chọn ngày ---
   const handleDayPress = (dateStr) => {

@@ -44,8 +44,7 @@ const [upcomingReminders, setUpcomingReminders] = useState([]); // cho 5 sự ki
     else if (hour < 18) setGreeting(`Chào buổi chiều, ${username} 🌤️`);
     else setGreeting(`Chào buổi tối, ${username} 🌙`);
   }, [username]);
-
-  useEffect(() => {
+useEffect(() => {
   if (!auth.currentUser) return;
 
   const unsubscribe = onSnapshot(
@@ -70,16 +69,28 @@ const [upcomingReminders, setUpcomingReminders] = useState([]); // cho 5 sự ki
         };
       });
 
-      // --- Home screen: tất cả sự kiện sắp tới ---
-      const allUpcoming = events
-        .filter(ev => ev.startDate >= now)
+      // --- Lấy khoảng thời gian trong ngày hôm nay ---
+      const startOfToday = new Date();
+      startOfToday.setHours(0, 0, 0, 0);
+
+      const endOfToday = new Date();
+      endOfToday.setHours(23, 59, 59, 999);
+
+      // --- Lọc sự kiện trong hôm nay và sau thời điểm hiện tại ---
+      const todayEvents = events
+        .filter(
+          (ev) =>
+            ev.startDate >= now && // chưa diễn ra
+            ev.startDate >= startOfToday &&
+            ev.startDate <= endOfToday
+        )
         .sort((a, b) => a.startDate - b.startDate);
 
-      setNotifications(allUpcoming); // hiển thị tất cả trên home
+      // --- Giữ tối đa 5 sự kiện ---
+      const top5Today = todayEvents.slice(0, 5);
 
-      // --- Notification: chỉ 5 sự kiện gần nhất ---
-      const upcomingForReminder = allUpcoming.slice(0, 5);
-      setUpcomingReminders(upcomingForReminder); // dùng để lập lịch nhắc nhở
+      setNotifications(top5Today); // Home hiển thị 5 sự kiện gần nhất trong hôm nay
+      setUpcomingReminders(top5Today); // Notification cũng dùng chung
     }
   );
 
@@ -87,49 +98,7 @@ const [upcomingReminders, setUpcomingReminders] = useState([]); // cho 5 sự ki
 }, []);
 
 
-// --- Hiển thị danh sách sự kiện ---
-<View style={styles.section}>
-  <Text style={[styles.sectionTitle, { color: isDarkMode ? "#fff" : "#333" }]}>
-    🔔 Sự kiện sắp tới
-  </Text>
 
-  {notifications.length > 0 ? (
-    notifications.map((event) => (
-      <View key={event.id} style={{ marginBottom: 12 }}>
-        <LinearGradient
-          colors={[event.calendarColor, "#ffaaa6"]}
-          style={styles.notifCard}
-        >
-          <TouchableOpacity
-            style={{ padding: 16, borderRadius: 16 }}
-            onPress={() => {
-              setSelectedEvent(event);
-              setDetailModalVisible(true);
-            }}
-          >
-            <Text style={styles.notifTitle}>{event.tieuDe}</Text>
-            <Text style={styles.notifTime}>
-              🕒 {event.startDate.toLocaleDateString()}{" "}
-              {event.caNgay
-                ? "(Cả ngày)"
-                : event.startDate.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) +
-                  (event.endDate
-                    ? ` - ${event.endDate.toLocaleDateString()} ${event.endDate.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`
-                    : "")}
-            </Text>
-            {event.type && <Text>📂 Lịch: {event.type}</Text>}
-            {event.location && <Text>📍 Địa điểm: {event.location}</Text>}
-            {event.description && <Text>📝 Ghi chú: {event.description}</Text>}
-            {event.lapLai && event.lapLai !== "Không lặp lại" && <Text>🔁 Lặp lại: {event.lapLai}</Text>}
-            {event.thongBao && event.thongBao !== "Không thông báo" && <Text>🔔 Thông báo: {event.thongBao}</Text>}
-          </TouchableOpacity>
-        </LinearGradient>
-      </View>
-    ))
-  ) : (
-    <Text style={{ color: "#999", fontStyle: "italic" }}>Không có sự kiện sắp tới</Text>
-  )}
-</View>
 
   // --- Câu trích dẫn ---
   useEffect(() => {
@@ -178,60 +147,80 @@ const [upcomingReminders, setUpcomingReminders] = useState([]); // cho 5 sự ki
           />
         </View>
 
-    {/* --- Thông báo sự kiện sắp tới --- */}
-<View style={styles.section}>
-  <Text style={[styles.sectionTitle, { color: isDarkMode ? "#fff" : "#333" }]}>
-    🔔 Sự Kiện Sắp Tới
-  </Text>
+{/* --- Sự kiện sắp tới --- */}
+<Text style={[styles.sectionTitle, { color: isDarkMode ? "#fff" : "#333" }]}>
+  🔔 Sự Kiện Sắp Tới
+</Text>
 
-  {notifications.length > 0 ? (
-    notifications.map((event) => (
-      <View key={event.id} style={{ marginBottom: 12 }}>
-        <LinearGradient
-          colors={["#ff8b94", "#ffaaa6"]}
-          style={styles.notifCard}
+{notifications.length > 0 ? (
+  <FlatList
+    data={notifications}
+    horizontal
+    keyExtractor={(item) => item.id}
+    showsHorizontalScrollIndicator={false}
+    contentContainerStyle={{ paddingHorizontal: 20 }}
+    snapToInterval={270}       // width + marginRight
+    decelerationRate="fast"    // scroll mượt
+    renderItem={({ item }) => (
+      <LinearGradient
+        colors={["#ff9a9e", "#fad0c4"]}
+        style={{
+          width: 250,
+          marginRight: 20,
+          borderRadius: 20,
+          overflow: "hidden",
+          shadowColor: "#000",
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.3,
+          shadowRadius: 6,
+          elevation: 8,
+        }}
+      >
+        <TouchableOpacity
+          style={{ padding: 16, flex: 1 }}
+          onPress={() => {
+            setSelectedEvent(item);
+            setDetailModalVisible(true);
+          }}
+          activeOpacity={0.8}
         >
-          <TouchableOpacity
-            style={{ padding: 16, borderRadius: 16 }}
-            onPress={() => {
-              setSelectedEvent(event);
-              setDetailModalVisible(true);
+          {item.type && <Text style={{ fontWeight: "700", fontSize: 12, marginBottom: 4 }}>📂 {item.type}</Text>}
+
+          <Text
+            style={{
+              fontWeight: "800",
+              fontSize: 18,                 // tăng size
+              marginBottom: 6,
+              color: "#1E88E5",             // màu nổi bật
+              textShadowColor: "rgba(0,0,0,0.2)", // shadow nhẹ
+              textShadowOffset: { width: 1, height: 1 },
+              textShadowRadius: 2,
             }}
+            numberOfLines={2}         
+            ellipsizeMode="tail"      
           >
-            {/* 📂 Lịch */}
-            {event.type && (
-              <Text style={[styles.notifText, { fontWeight: "bold" }]}>
-                📂 {event.type}
-              </Text>
-            )}
+            {item.tieuDe}
+          </Text>
 
-            {/* 📝 Tiêu đề */}
-           <Text style={styles.notifTitle}>{event.tieuDe}</Text>
-
-            {/* 🕒 Thời gian */}
-            <Text style={styles.notifTime}>
-              🕒 {event.startDate.toLocaleDateString()}{" "}
-              {event.startDate.toLocaleTimeString([], {
-                hour: "2-digit",
-                minute: "2-digit",
-              })}
-              {event.endDate
-                ? ` - ${event.endDate.toLocaleDateString()} ${event.endDate.toLocaleTimeString([], {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}`
-                : ""}
-            </Text>
-          </TouchableOpacity>
-        </LinearGradient>
-      </View>
-    ))
-  ) : (
-    <Text style={{ color: "#999", fontStyle: "italic" }}>
-      Không có sự kiện sắp tới
-    </Text>
-  )}
-</View>
+          <Text style={{ fontSize: 13, color: "#555" }}>
+            🕒 {item.startDate.toLocaleDateString()}{" "}
+            {item.startDate.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+            {item.endDate
+              ? ` - ${item.endDate.toLocaleDateString()} ${item.endDate.toLocaleTimeString([], {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}`
+              : ""}
+          </Text>
+        </TouchableOpacity>
+      </LinearGradient>
+    )}
+  />
+) : (
+  <Text style={{ color: "#999", fontStyle: "italic", paddingHorizontal: 20 }}>
+    Không có sự kiện sắp tới
+  </Text>
+)}
 
 
         {/* --- Hành động nhanh --- */}
@@ -288,98 +277,92 @@ const [upcomingReminders, setUpcomingReminders] = useState([]); // cho 5 sự ki
     </SafeAreaView>
   );
 }
-// --- Modal Thống Kê Tuần ---
-function WeeklyStatsModal({ stats, showEvents, setShowEvents, onClose, onSelectEvent }) {
-  const { width } = Dimensions.get("window");
 
-  // Lọc sự kiện dựa trên trạng thái
+      {/* --- Thống Kê Tuần  --- */}
+function WeeklyStatsModal({ stats, onClose, onSelectEvent }) {
+  const { width } = Dimensions.get("window");
+  const [filter, setFilter] = useState("all"); // all, completed, pending
+
+  // Filter events dựa theo trạng thái
+  const now = new Date();
   const filteredEvents = stats.events.filter((e) => {
-    const now = new Date();
-    if (showEvents === "completed") return new Date(e.startDate) < now;  // đã hoàn thành
-    if (showEvents === "pending") return new Date(e.startDate) >= now;   // chưa hoàn thành
-    return true; // tất cả
+    const start = new Date(e.ngayBatDau);
+    if (filter === "completed") return start < now;
+    if (filter === "pending") return start >= now;
+    return true;
   });
 
   return (
     <Modal visible={true} animationType="slide">
       <SafeAreaView style={{ flex: 1, backgroundColor: "#f5f7fb" }}>
-        {/* --- Header --- */}
-        <View style={styles.modalHeader}>
-          <Text style={styles.modalHeaderTitle}>Thống Kê Tuần</Text>
+        {/* Header */}
+        <View style={{ flexDirection: "row", justifyContent: "space-between", padding: 16, borderBottomWidth: 1, borderColor: "#ddd" }}>
+          <Text style={{ fontWeight: "700", fontSize: 20, color: "#1E88E5" }}>Thống Kê Tuần</Text>
           <TouchableOpacity onPress={onClose}>
             <Ionicons name="close" size={26} color="#333" />
           </TouchableOpacity>
         </View>
 
-        {/* --- Thẻ số liệu --- */}
-        <View style={styles.statsContainer}>
-          <TouchableOpacity style={styles.statCard} onPress={() => setShowEvents("all")}>
-            <Text style={[styles.statNumber, { color: "#4a90e2" }]}>{stats.weekEvents}</Text>
-            <Text style={styles.statLabel}>Tổng Sự Kiện</Text>
+        {/* Số liệu */}
+        <View style={{ flexDirection: "row", justifyContent: "space-around", marginVertical: 20 }}>
+          <TouchableOpacity onPress={() => setFilter("all")} style={{ alignItems: "center" }}>
+            <Text style={{ fontSize: 26, fontWeight: "700", color: "#4a90e2" }}>{stats.weekEvents}</Text>
+            <Text>Tổng sự kiện</Text>
           </TouchableOpacity>
-
-          <TouchableOpacity style={styles.statCard} onPress={() => setShowEvents("pending")}>
-            <Text style={[styles.statNumber, { color: "#e67e22" }]}>{stats.pending}</Text>
-            <Text style={styles.statLabel}>Chưa Hoàn Thành</Text>
+          <TouchableOpacity onPress={() => setFilter("pending")} style={{ alignItems: "center" }}>
+            <Text style={{ fontSize: 26, fontWeight: "700", color: "#e67e22" }}>{stats.pending}</Text>
+            <Text>Chưa hoàn thành</Text>
           </TouchableOpacity>
-
-          <TouchableOpacity style={styles.statCard} onPress={() => setShowEvents("completed")}>
-            <Text style={[styles.statNumber, { color: "#2ecc71" }]}>{stats.weekEvents - stats.pending}</Text>
-            <Text style={styles.statLabel}>Đã Hoàn Thành</Text>
+          <TouchableOpacity onPress={() => setFilter("completed")} style={{ alignItems: "center" }}>
+            <Text style={{ fontSize: 26, fontWeight: "700", color: "#2ecc71" }}>{stats.weekEvents - stats.pending}</Text>
+            <Text>Đã hoàn thành</Text>
           </TouchableOpacity>
         </View>
 
-        {/* --- Biểu đồ tròn --- */}
         {stats.weekEvents > 0 && (
-          <PieChart
-            data={[
-              { name: "Đã Hoàn Thành", population: stats.weekEvents - stats.pending, color: "#2ecc71", legendFontColor: "#333", legendFontSize: 13 },
-              { name: "Chưa Hoàn Thành", population: stats.pending, color: "#e67e22", legendFontColor: "#333", legendFontSize: 13 },
-            ]}
-            width={width - 40}
-            height={200}
-            chartConfig={{ color: () => "#333" }}
-            accessor="population"
-            backgroundColor="transparent"
-            paddingLeft="16"
-            absolute
-          />
-        )}
+  <PieChart
+    data={[
+      { name: "Đã Hoàn Thành", population: stats.weekEvents - stats.pending, color: "#2ecc71", legendFontColor: "#333", legendFontSize: 13 },
+      { name: "Chưa Hoàn Thành", population: stats.pending, color: "#e67e22", legendFontColor: "#333", legendFontSize: 13 },
+    ]}
+    width={width - 40}
+    height={200}
+    chartConfig={{ color: () => "#333" }}
+    accessor="population"
+    backgroundColor="transparent"
+    paddingLeft="16"
+    absolute
+  />
+)}
 
-        {/* --- Danh sách sự kiện --- */}
-        {showEvents && (
-          <FlatList
-            data={filteredEvents}
-            keyExtractor={(item) => item.id}
-            renderItem={({ item }) => {
-              const isCompleted = new Date(item.startDate) < new Date();
-              return (
-                <TouchableOpacity
-                  style={[styles.eventCard, { borderLeftColor: isCompleted ? "#2ecc71" : "#e67e22" }]}
-                  onPress={() => onSelectEvent(item)}
-                >
-                  <View style={{ flexDirection: "row", alignItems: "center" }}>
-                    <Ionicons
-                      name={isCompleted ? "checkmark-circle" : "time"}
-                      size={22}
-                      color={isCompleted ? "#2ecc71" : "#e67e22"}
-                      style={{ marginRight: 10 }}
-                    />
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.eventTitle}>{item.title}</Text>
-                      <Text style={styles.eventTime}>{new Date(item.startDate).toLocaleString()}</Text>
-                    </View>
-                  </View>
-                </TouchableOpacity>
-              );
-            }}
-            contentContainerStyle={{ padding: 16, paddingBottom: 20 }}
-          />
-        )}
+
+        {/* Danh sách sự kiện */}
+        <FlatList
+          data={filteredEvents}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => {
+            const isCompleted = new Date(item.ngayBatDau) < now;
+            return (
+              <TouchableOpacity
+                style={{ padding: 12, borderRadius: 12, marginVertical: 6, backgroundColor: "#fff", borderLeftWidth: 4, borderLeftColor: isCompleted ? "#2ecc71" : "#e67e22" }}
+                onPress={() => onSelectEvent(item)}
+              >
+                <Text style={{ fontWeight: "700", fontSize: 16, color: "#333" }}>{item.tieuDe}</Text>
+                <Text style={{ fontSize: 12, color: "#555" }}>
+                  🕒 {new Date(item.ngayBatDau).toLocaleString()} - {item.ngayKetThuc ? new Date(item.ngayKetThuc).toLocaleString() : "-"}
+                </Text>
+              </TouchableOpacity>
+            );
+          }}
+          contentContainerStyle={{ padding: 16, paddingBottom: 20 }}
+          ListEmptyComponent={<Text style={{ textAlign: "center", color: "#999", marginTop: 20 }}>Không có sự kiện nào</Text>}
+        />
       </SafeAreaView>
     </Modal>
   );
 }
+
+
 
 // --- Modal Chi Tiết Sự Kiện ---
 function EventDetailModal({ event, onClose }) {
@@ -444,6 +427,8 @@ function EventDetailModal({ event, onClose }) {
   );
 }
 // --- Styles ---
+
+
 const styles = StyleSheet.create({
   container: { flex: 1 },
   header: { flexDirection: "row", alignItems: "center", padding: 20, borderBottomLeftRadius: 30, borderBottomRightRadius: 30, elevation: 6 },
@@ -478,4 +463,32 @@ const styles = StyleSheet.create({
   detailText: { fontSize: 14, color: "#555", marginBottom: 6 },
   closeBtnModal: { marginTop: 16, backgroundColor: "#1E88E5", padding: 14, borderRadius: 12, alignItems: "center" },
 
+  notifListContainer: {
+  maxHeight: 320, // chiều cao tối đa, bạn có thể tăng/giảm tuỳ màn hình
+},
+notifCard: {
+  borderRadius: 16,
+  elevation: 4,
+  shadowColor: "#000",
+  shadowOffset: { width: 0, height: 2 },
+  shadowOpacity: 0.2,
+  shadowRadius: 4,
+},
+notifContent: {
+  padding: 16,
+  borderRadius: 16,
+},
+notifType: {
+  fontWeight: "700",
+  fontSize: 12,
+  marginBottom: 4,
+},
+notifTitle: {
+  fontWeight: "700",
+  fontSize: 16,
+  marginBottom: 6,
+},
+notifTime: {
+  fontSize: 13,
+}
 });
