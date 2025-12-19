@@ -1,0 +1,559 @@
+﻿// screens/EventDetailScreen.js
+// M├án h├¼nh chi tiß║┐t sß╗▒ kiß╗çn vß╗¢i m├áu ─æß╗Öng theo lß╗ïch
+import React, { useEffect, useState, useRef } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert, ImageBackground, SafeAreaView, StatusBar, Linking, Animated } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { doc, getDoc, deleteDoc } from 'firebase/firestore';
+import { db } from '../firebase';
+import { useTranslation } from 'react-i18next';
+import { useSettings } from '../context/SettingsContext';
+import useTheme from '../hooks/useTheme';
+
+function adjustColor(hex, amt = 0) {
+  try {
+    if (!hex) return '#D32F2F';
+    hex = hex.replace('#','');
+    if (hex.length === 3) hex = hex.split('').map(c=>c+c).join('');
+    const num = parseInt(hex,16);
+    let r = (num >> 16) & 255;
+    let g = (num >> 8) & 255;
+    let b = num & 255;
+    r = Math.min(255, Math.max(0, r + amt));
+    g = Math.min(255, Math.max(0, g + amt));
+    b = Math.min(255, Math.max(0, b + amt));
+    return '#' + [r,g,b].map(v=>v.toString(16).padStart(2,'0')).join('');
+  } catch { return hex; }
+}
+const getCalendarIcon = (key) => {
+  const icons = {
+    work:        { icon: 'briefcase',        emoji: '≡ƒÆ╝' },
+    personal:    { icon: 'heart',            emoji: 'Γ¥ñ∩╕Å' },
+    study:       { icon: 'book-open-variant',emoji: '≡ƒôÜ' },
+    family:      { icon: 'home-heart',       emoji: '≡ƒÅá' },
+    health:      { icon: 'heart-pulse',      emoji: '≡ƒÆ¬' },
+    travel:      { icon: 'airplane',         emoji: 'Γ£ê∩╕Å' },
+    project:     { icon: 'lightbulb-on',     emoji: '≡ƒÆí' },
+    social:      { icon: 'account-group',    emoji: '≡ƒÄë' },
+    finance:     { icon: 'wallet',           emoji: '≡ƒÆ░' },
+    hobby:       { icon: 'star',             emoji: '≡ƒÄ¿' },
+  };
+
+  // ≡ƒÄç Danh s├ích emoji fallback si├¬u ─æß║╣p ΓÇô Ho├áng Gia Tß║┐t 2026
+  const fallbackEmojis = ["≡ƒºº", "Γ£¿", "≡ƒî║", "≡ƒÄè", "≡ƒîƒ", "≡ƒÄÇ"];
+
+  return icons[key] || {
+    icon: "sparkles", 
+    emoji: fallbackEmojis[Math.floor(Math.random() * fallbackEmojis.length)],
+  };
+};
+
+
+const formatDateTime = (date, locale = 'vi-VN', t) => {
+  if (!date) return t('notFoundEvent');
+  const d = date.toDate ? date.toDate() : new Date(date);
+  return new Intl.DateTimeFormat(locale, {
+    weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
+  }).format(d);
+};
+
+const AnimatedStarIcon = ({ color }) => {
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+  const rotateAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const pulse = Animated.loop(
+      Animated.sequence([
+        Animated.timing(scaleAnim, {
+          toValue: 1.25,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(scaleAnim, {
+          toValue: 1,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+      ])
+    );
+
+    const rotate = Animated.loop(
+      Animated.timing(rotateAnim, {
+        toValue: 1,
+        duration: 4000,
+        useNativeDriver: true,
+      })
+    );
+
+    pulse.start();
+    rotate.start();
+
+    return () => {
+      pulse.stop();
+      rotate.stop();
+    };
+  }, []);
+
+  const spin = rotateAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg'],
+  });
+
+  return (
+    <Animated.View
+      style={{
+        transform: [{ scale: scaleAnim }, { rotate: spin }],
+      }}
+    >
+      <Ionicons name='star' size={32} color={color} />
+    </Animated.View>
+  );
+};
+
+const AnimatedCalendarIcon = ({ calendarKey, color, date }) => {
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+  const rotateAnim = useRef(new Animated.Value(0)).current;
+  const calendarInfo = getCalendarIcon(calendarKey);
+  
+  // Lß║Ñy ng├áy tß╗½ date
+  const eventDate = date ? (date.toDate ? date.toDate() : new Date(date)) : new Date();
+  const day = eventDate.getDate();
+
+  useEffect(() => {
+    const pulse = Animated.loop(
+      Animated.sequence([
+        Animated.timing(scaleAnim, {
+          toValue: 1.2,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(scaleAnim, {
+          toValue: 1,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+      ])
+    );
+
+    const rotate = Animated.loop(
+      Animated.timing(rotateAnim, {
+        toValue: 1,
+        duration: 3000,
+        useNativeDriver: true,
+      })
+    );
+
+    pulse.start();
+    rotate.start();
+
+    return () => {
+      pulse.stop();
+      rotate.stop();
+    };
+  }, []);
+
+  const spin = rotateAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg'],
+  });
+
+  return (
+    <Animated.View
+      style={{
+        transform: [{ scale: scaleAnim }, { rotate: spin }],
+        width: 64,
+        height: 64,
+        justifyContent: 'center',
+        alignItems: 'center',
+      }}
+    >
+      {/* V├▓ng ngo├ái ph├ít s├íng */}
+      <View style={{
+        position: 'absolute',
+        width: 64,
+        height: 64,
+        borderRadius: 32,
+        backgroundColor: 'rgba(255,255,255,0.1)',
+        borderWidth: 2,
+        borderColor: 'rgba(255,255,255,0.3)',
+      }} />
+      
+      {/* Icon v├á sß╗æ ng├áy */}
+      <View style={{
+        justifyContent: 'center',
+        alignItems: 'center',
+      }}>
+        <Ionicons name={calendarInfo.icon} size={28} color='rgba(255,255,255,0.6)' />
+        <View style={{
+          position: 'absolute',
+          backgroundColor: 'rgba(255,255,255,0.95)',
+          borderRadius: 10,
+          paddingHorizontal: 6,
+          paddingVertical: 2,
+          top: 14,
+          borderWidth: 1,
+          borderColor: 'rgba(255,255,255,0.5)',
+        }}>
+          <Text style={{
+            fontSize: 14,
+            fontWeight: '900',
+            color: '#D32F2F',
+          }}>
+            {day}
+          </Text>
+        </View>
+      </View>
+    </Animated.View>
+  );
+};
+
+const FloatingEmoji = ({ emoji }) => {
+  const floatAnim = useRef(new Animated.Value(0)).current;
+  const rotateAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const float = Animated.loop(
+      Animated.sequence([
+        Animated.timing(floatAnim, {
+          toValue: -15,
+          duration: 2000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(floatAnim, {
+          toValue: 0,
+          duration: 2000,
+          useNativeDriver: true,
+        }),
+      ])
+    );
+
+    const rotate = Animated.loop(
+      Animated.sequence([
+        Animated.timing(rotateAnim, {
+          toValue: 1,
+          duration: 3000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(rotateAnim, {
+          toValue: 0,
+          duration: 3000,
+          useNativeDriver: true,
+        }),
+      ])
+    );
+
+    float.start();
+    rotate.start();
+
+    return () => {
+      float.stop();
+      rotate.stop();
+    };
+  }, []);
+
+  const rotation = rotateAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['-15deg', '15deg'],
+  });
+
+  return (
+    <Animated.Text
+      style={{
+        fontSize: 48,
+        position: 'absolute',
+        right: 20,
+        top: 10,
+        transform: [{ translateY: floatAnim }, { rotate: rotation }],
+      }}
+    >
+      {emoji}
+    </Animated.Text>
+  );
+};
+
+export default function EventDetailScreen({ navigation, route }) {
+  const { isDarkMode, language } = useSettings(); // language ─æ├ú c├│, ─æß║úm bß║úo c├íc useEffect phß╗Ñ thuß╗Öc language
+  const { palette } = useTheme();
+  const { eventId: routeEventId, event: routeEvent } = route.params || {};
+  const { t } = useTranslation();
+  const [event, setEvent] = useState(routeEvent || null);
+  const [eventId] = useState(routeEvent?.id || routeEventId || null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadEvent = async () => {
+      try {
+        if (!eventId) {
+          if (routeEvent) { setEvent(routeEvent); setLoading(false); return; }
+          Alert.alert(t('error'), t('notFoundEvent')); navigation.goBack(); return;
+        }
+        const docRef = doc(db, 'events', eventId);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) setEvent({ id: docSnap.id, ...docSnap.data() });
+        else { Alert.alert(t('error'), t('notFoundEvent')); navigation.goBack(); }
+      } catch (e) { console.error(e); Alert.alert(t('error'), t('loadEventFailed')); }
+      finally { setLoading(false); }
+    };
+    loadEvent();
+  }, [eventId]);
+
+  const handleEdit = () => navigation.navigate('EditEventScreen', { event, onUpdate: (updated) => {
+    if (updated) setEvent(updated); else navigation.goBack();
+  }});
+
+  const handleDelete = () => {
+    Alert.alert(t('deleteEvent'), t('deleteEventConfirm'), [
+      { text: t('cancel'), style: 'cancel' },
+      { text: t('delete'), style: 'destructive', onPress: async () => {
+        try { await deleteDoc(doc(db,'events',event.id)); Alert.alert(t('success'), t('eventDeleted'),[{text:'OK',onPress:()=>navigation.goBack()}]); }
+        catch(e){ Alert.alert(t('error'), t('deleteFailed')); }
+      }}
+    ]);
+  };
+
+  const openURL = (url) => { if (url) Linking.openURL(url).catch(()=>Alert.alert(t('error'), t('loadEventFailed'))); };
+
+  if (loading || !event) return <View style={{flex:1,justifyContent:'center',alignItems:'center'}}><Text>{t('loading')||'...'}</Text></View>;
+
+  const baseColor = event.lich?.color || '#D32F2F';
+  const headerGradient = [adjustColor(baseColor,60), adjustColor(baseColor,0)];
+  const actionGradient = [adjustColor(baseColor,50), adjustColor(baseColor,-10)];
+  const deleteColor = adjustColor(baseColor,-40);
+
+  return (
+    <ImageBackground 
+      source={isDarkMode ? null : require('../assets/bg-tet.jpg')} 
+      style={{flex:1, backgroundColor: isDarkMode ? palette?.background : 'transparent'}} 
+      blurRadius={2}
+    >
+      <LinearGradient 
+        colors={[
+          palette?.surfaceGradientStart || (adjustColor(baseColor,-70)+'cc'), 
+          palette?.surfaceGradientMid || (adjustColor(baseColor,-30)+'44'), 
+          palette?.surfaceGradientEnd || (adjustColor(baseColor,-70)+'cc')
+        ]} 
+        style={{flex:1}}
+      >
+        <SafeAreaView style={{flex:1}}>
+          <StatusBar barStyle='light-content' />
+          <LinearGradient 
+            colors={isDarkMode 
+              ? [palette?.headerStart || '#2C2C2C', palette?.headerEnd || '#1A1A1A'] 
+              : headerGradient
+            } 
+            style={[styles.header,{shadowColor:adjustColor(baseColor,-20)}]}
+          >
+            <TouchableOpacity style={styles.backBtn} onPress={()=>navigation.goBack()}>
+              <Ionicons name='arrow-back' size={28} color={isDarkMode ? palette?.accent : adjustColor(baseColor,-40)} />
+            </TouchableOpacity>
+            <Text style={[styles.headerTitle,{color:isDarkMode ? palette?.accent : adjustColor(baseColor,-50)}]}>{t('event_details_label')}</Text>
+            <View style={{width:50}} />
+          </LinearGradient>
+          <ScrollView contentContainerStyle={styles.container}>
+            {/* Ti├¬u ─æß╗ü sß╗▒ kiß╗çn nß╗òi bß║¡t vß╗¢i animation */}
+            <LinearGradient 
+              colors={isDarkMode 
+                ? [adjustColor(baseColor, 20)+'33', adjustColor(baseColor, -10)+'22'] 
+                : [adjustColor(baseColor, 80)+'dd', adjustColor(baseColor, 50)+'dd']
+              } 
+              style={styles.titleCard}
+            >
+              <FloatingEmoji emoji={getCalendarIcon(event.lich?.key).emoji} />
+              <View style={styles.titleHeader}>
+                <AnimatedStarIcon color={baseColor} />
+                <Text style={[styles.eventTitle, {color: isDarkMode ? palette?.text : '#000'}]}>
+                  {event.tieuDe || t('noTitle')}
+                </Text>
+              </View>
+            </LinearGradient>
+
+            {/* Thß║╗ lß╗ïch nß╗òi bß║¡t vß╗¢i animation */}
+            <LinearGradient 
+              colors={[baseColor+'dd', adjustColor(baseColor, -30)+'dd']} 
+              style={styles.calendarCard}
+            >
+              <View style={styles.calendarContent}>
+                <View style={[styles.calendarDot, {backgroundColor: adjustColor(baseColor, 60), borderColor: '#fff'}]} />
+                <View style={{flex: 1}}>
+                  <Text style={styles.calendarLabel}>≡ƒôé Lß╗èCH</Text>
+                  <Text style={styles.calendarName}>{event.lich?.name || t('notFoundEvent')}</Text>
+                </View>
+                <AnimatedCalendarIcon 
+                  calendarKey={event.lich?.key} 
+                  color='rgba(255,255,255,0.3)' 
+                  date={event.ngayBatDau}
+                />
+              </View>
+            </LinearGradient>
+            <View style={[styles.infoCard, {backgroundColor: isDarkMode ? palette?.card : 'rgba(255,255,255,0.95)', borderColor: baseColor}]}>
+              <View style={styles.infoRow}>
+                <Ionicons name='time-outline' size={26} color={baseColor} />
+                <View style={{marginLeft:16,flex:1}}>
+                  <Text style={[styles.infoLabel, {color: isDarkMode ? palette?.textSecondary : '#666'}]}>{t('start')}</Text>
+                  <Text style={[styles.infoText,{color: isDarkMode ? palette?.text : adjustColor(baseColor,-40)}]}>{event.caNgay? t('allDay') : formatDateTime(event.ngayBatDau, language, t)}</Text>
+                </View>
+              </View>
+              <View style={styles.infoRow}>
+                <Ionicons name='time' size={26} color={baseColor} />
+                <View style={{marginLeft:16,flex:1}}>
+                  <Text style={[styles.infoLabel, {color: isDarkMode ? palette?.textSecondary : '#666'}]}>{t('end')}</Text>
+                  <Text style={[styles.infoText,{color: isDarkMode ? palette?.text : adjustColor(baseColor,-40)}]}>{event.caNgay? t('allDay') : formatDateTime(event.ngayKetThuc, language, t)}</Text>
+                </View>
+              </View>
+              {event.lapLai && event.lapLai !== 'Kh├┤ng lß║╖p lß║íi' && (
+                <View style={styles.infoRow}>
+                  <Ionicons name='repeat' size={26} color={baseColor} />
+                  <View style={{marginLeft:16}}>
+                    <Text style={[styles.infoLabel, {color: isDarkMode ? palette?.textSecondary : '#666'}]}>{t('repeat')}</Text>
+                    <Text style={[styles.infoText,{color: isDarkMode ? palette?.text : adjustColor(baseColor,-40)}]}>{event.lapLai}</Text>
+                  </View>
+                </View>
+              )}
+              {event.thongBao && event.thongBao !== 'Kh├┤ng th├┤ng b├ío' && (
+                <View style={styles.infoRow}>
+                  <Ionicons name='notifications-outline' size={26} color={baseColor} />
+                  <View style={{marginLeft:16}}>
+                    <Text style={[styles.infoLabel, {color: isDarkMode ? palette?.textSecondary : '#666'}]}>{t('notification')}</Text>
+                    <Text style={[styles.infoText,{color: isDarkMode ? palette?.text : adjustColor(baseColor,-40)}]}>{event.thongBao}</Text>
+                  </View>
+                </View>
+              )}
+            </View>
+            {event.diaDiem && (
+              <View style={[styles.infoCard, {backgroundColor: isDarkMode ? palette?.card : 'rgba(255,255,255,0.95)', borderColor: baseColor}]}>
+                <View style={styles.infoRow}>
+                  <Ionicons name='location-outline' size={26} color={baseColor} />
+                  <Text style={[styles.infoTextLocation,{color: isDarkMode ? palette?.text : adjustColor(baseColor,-40)}]}>{event.diaDiem}</Text>
+                </View>
+              </View>
+            )}
+            {event.url && (
+              <TouchableOpacity style={[styles.infoCard, {backgroundColor: isDarkMode ? palette?.card : 'rgba(255,255,255,0.95)', borderColor: baseColor}]} onPress={()=>openURL(event.url)}>
+                <View style={styles.infoRow}>
+                  <Ionicons name='link' size={26} color={baseColor} />
+                  <Text style={[styles.infoTextLink,{color: baseColor}]}>{t('openLink')}</Text>
+                </View>
+              </TouchableOpacity>
+            )}
+            {event.ghiChu && (
+              <View style={[styles.infoCard, {backgroundColor: isDarkMode ? palette?.card : 'rgba(255,255,255,0.95)', borderColor: baseColor}]}>
+                <View style={styles.infoRow}>
+                  <Ionicons name='document-text-outline' size={26} color={baseColor} />
+                  <Text style={[styles.infoTextNote, {color: isDarkMode ? palette?.text : '#333'}]}>{event.ghiChu}</Text>
+                </View>
+              </View>
+            )}
+            <View style={{marginTop:30,gap:16}}>
+              <TouchableOpacity style={[styles.editButton,{shadowColor:adjustColor(baseColor,-30)}]} onPress={handleEdit}>
+                <LinearGradient colors={actionGradient} style={styles.buttonGradient}>
+                  <Ionicons name='create-outline' size={26} color={adjustColor(baseColor,-50)} />
+                  <Text style={[styles.editButtonText,{color:adjustColor(baseColor,-50)}]}>{t('editEventTitle')}</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.deleteButton,{backgroundColor:deleteColor,shadowColor:deleteColor}]} onPress={handleDelete}>
+                <Text style={styles.deleteButtonText}>{t('deleteEvent')}</Text>
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
+        </SafeAreaView>
+      </LinearGradient>
+    </ImageBackground>
+  );
+}
+
+const styles = StyleSheet.create({
+  header: { paddingTop:50, paddingBottom:20, paddingHorizontal:20, flexDirection:'row', alignItems:'center', justifyContent:'space-between', borderBottomLeftRadius:30, borderBottomRightRadius:30, elevation:15 },
+  backBtn: { padding:8 },
+  headerTitle: { fontSize:24, fontWeight:'900', letterSpacing:1 },
+  container: { padding:20 },
+  titleCard: {
+    borderRadius: 24,
+    padding: 24,
+    marginBottom: 16,
+    elevation: 12,
+    shadowColor: '#000',
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 5 },
+    borderWidth: 3,
+    borderColor: 'rgba(255,255,255,0.3)',
+    overflow: 'visible',
+    position: 'relative',
+  },
+  titleHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+  eventTitle: { 
+    fontSize: 32, 
+    fontWeight: '900', 
+    flex: 1,
+    textShadowColor: 'rgba(0,0,0,0.3)',
+    textShadowOffset: { width: 2, height: 2 },
+    textShadowRadius: 4,
+    letterSpacing: 0.5,
+  },
+  calendarCard: {
+    borderRadius: 20,
+    padding: 20,
+    marginBottom: 24,
+    elevation: 10,
+    shadowColor: '#000',
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+  },
+  calendarContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+  calendarDot: { 
+    width: 28, 
+    height: 28, 
+    borderRadius: 14, 
+    borderWidth: 3, 
+    borderColor: '#fff',
+    elevation: 5,
+  },
+  calendarLabel: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.8)',
+    fontWeight: '700',
+    marginBottom: 4,
+    letterSpacing: 1,
+  },
+  calendarName: { 
+    fontSize: 22, 
+    color: '#fff', 
+    fontWeight: '900',
+    textShadowColor: 'rgba(0,0,0,0.3)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 3,
+  },
+  infoCard: { 
+    backgroundColor:'rgba(255,255,255,0.95)', 
+    borderRadius:20, 
+    padding:20, 
+    marginBottom:16, 
+    borderWidth: 3, 
+    borderColor:'#FFD700', 
+    elevation:8,
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
+  },
+  infoRow: { flexDirection:'row', alignItems:'flex-start' },
+  infoLabel: { fontSize:14, color:'#666', marginBottom:4 },
+  infoText: { fontSize:18, color:'#D32F2F', fontWeight:'600', marginLeft:16, flex:1 },
+  infoTextLocation: { fontSize:18, color:'#D32F2F', fontWeight:'600', marginLeft:16, flex:1 },
+  infoTextLink: { fontSize:18, color:'#0066ff', fontWeight:'600', marginLeft:16, textDecorationLine:'underline' },
+  infoTextNote: { fontSize:17, color:'#333', marginLeft:16, lineHeight:24, flex:1 },
+  editButton: { borderRadius:20, overflow:'hidden', elevation:12 },
+  buttonGradient: { flexDirection:'row', alignItems:'center', justifyContent:'center', paddingVertical:18, gap:12 },
+  editButtonText: { fontSize:20, fontWeight:'bold', color:'#D32F2F' },
+  deleteButton: { backgroundColor:'#FF1744', paddingVertical:18, borderRadius:20, alignItems:'center', elevation:10 },
+  deleteButtonText: { color:'#fff', fontSize:18, fontWeight:'bold' },
+});
