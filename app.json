@@ -1,0 +1,77 @@
+{
+  "expo": {
+    "name": "QuanLyLichSV",
+    "slug": "totnghiep-4e113",
+    "scheme": "totnghiep",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "build": {
+      "development": {
+        "developmentClient": true,
+        "distribution": "internal"
+      },
+      "preview": {
+        "distribution": "internal"
+      }
+    },
+    "splash": {
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "updates": {
+      "fallbackToCacheTimeout": 0
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.tuansv.lich",
+      "infoPlist": {
+        "UIBackgroundModes": [
+          "remote-notification"
+        ]
+      }
+    },
+    "android": {
+      "package": "com.tuansv.lich",
+      "googleServicesFile": "./google-services.json",
+      "permissions": [
+        "NOTIFICATIONS",
+        "VIBRATE",
+        "WAKE_LOCK",
+        "INTERNET"
+      ],
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "useNextNotificationApi": true
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#3F51B5"
+        }
+      ],
+      "expo-web-browser"
+    ],
+    "extra": {
+      "googleRedirectUris": [
+        "https://auth.expo.io/@tuannguyen1205/totnghiep-4e113",
+        "https://auth.expo.io/@anonymous/totnghiep-4e113",
+        "https://auth.expo.io/@tuannguyen1205/totnghiep-4e113",
+        "https://auth.expo.io/@anonymous/totnghiep-4e113"
+      ],
+      "eas": {
+        "projectId": "b81c3bdb-3769-4301-8482-fd9e254d9332"
+      }
+    }
+  }
+}

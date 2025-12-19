@@ -1,0 +1,38 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Cho phép đọc/ghi events của chính user đó
+    match /events/{eventId} {
+      allow read: if request.auth != null && (
+        resource.data.userId == request.auth.uid || 
+        !exists(/databases/$(database)/documents/events/$(eventId))
+      );
+      allow write, delete: if request.auth != null && 
+        resource.data.userId == request.auth.uid;
+      allow create: if request.auth != null && 
+        request.resource.data.userId == request.auth.uid;
+    }
+    
+    // Cho phép đọc/ghi chat messages của chính user đó
+    match /chatMessages/{messageId} {
+      allow read: if request.auth != null && (
+        resource.data.userId == request.auth.uid ||
+        !exists(/databases/$(database)/documents/chatMessages/$(messageId))
+      );
+      allow write, delete: if request.auth != null && 
+        resource.data.userId == request.auth.uid;
+      allow create: if request.auth != null && 
+        request.resource.data.userId == request.auth.uid;
+    }
+    
+    // Cho phép đọc/ghi chat history (subcollection structure)
+    match /chatHistory/{userName}/messages/{messageId} {
+      allow read, write, create, delete: if request.auth != null;
+    }
+    
+    // Cho phép đọc/ghi user profile
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+  }
+}

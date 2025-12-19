@@ -1,0 +1,91 @@
+{
+  "project_info": {
+    "project_number": "513257594496",
+    "firebase_url": "https://totnghiep-4e113-default-rtdb.firebaseio.com",
+    "project_id": "totnghiep-4e113",
+    "storage_bucket": "totnghiep-4e113.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:513257594496:android:7c694cff2218b02045d065",
+        "android_client_info": {
+          "package_name": "com.tuansv.lich"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "513257594496-vf3f6ni4rihb3knkdnq6t3taijeaiihn.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyASkis3GAxX91-PGm5T4hLjkG1NZY6rYyI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "513257594496-fofr66rmhr3nt8egiqg9tmqvt2pqgqug.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "513257594496-nv57qd2p89c3jqja5j898tka7pknhbj9.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.totnghiep.app"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:513257594496:android:4a004971407d022845d065",
+        "android_client_info": {
+          "package_name": "host.exp.exponent"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "513257594496-svjupoadad5i183svn18alhi96uhgm90.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "host.exp.exponent",
+            "certificate_hash": "a530e41938ce4998d66d6e826c6bb04f3bfa218d"
+          }
+        },
+        {
+          "client_id": "513257594496-vf3f6ni4rihb3knkdnq6t3taijeaiihn.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyASkis3GAxX91-PGm5T4hLjkG1NZY6rYyI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "513257594496-fofr66rmhr3nt8egiqg9tmqvt2pqgqug.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "513257594496-nv57qd2p89c3jqja5j898tka7pknhbj9.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.totnghiep.app"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

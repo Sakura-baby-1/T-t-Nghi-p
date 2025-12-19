@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="NONE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="81434dc1-fe6a-43a4-9dff-6a248377f913" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/.vscode/settings.json" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/assets/bg-tet.jpg" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/assets/splash.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/data/titleSuggestions.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/eas.json" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/hooks/useTheme.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/metro.config.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/privacy.html" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/screens/EditEventScreen.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/screens/ImportFileScreen.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/screens/StatisticsScreen.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/utils/holidaysApi.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/utils/theme.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/utils/vietnam_holidays_2025.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/App.js" beforeDir="false" afterPath="$PROJECT_DIR$/App.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/SyncTKBScreen.js" beforeDir="false" afterPath="$PROJECT_DIR$/SyncTKBScreen.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app.json" beforeDir="false" afterPath="$PROJECT_DIR$/app.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/assets/tdmu.jpg" beforeDir="false" afterPath="$PROJECT_DIR$/assets/tdmu.jpg" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/context/SettingsContext.js" beforeDir="false" afterPath="$PROJECT_DIR$/context/SettingsContext.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/firebase.js" beforeDir="false" afterPath="$PROJECT_DIR$/firebase.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/i18n.js" beforeDir="false" afterPath="$PROJECT_DIR$/i18n.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/notifications.js" beforeDir="false" afterPath="$PROJECT_DIR$/notifications.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/package-lock.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/package.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/screens/AIChatScreen.js" beforeDir="false" afterPath="$PROJECT_DIR$/screens/AIChatScreen.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/screens/AddEventScreen.js" beforeDir="false" afterPath="$PROJECT_DIR$/screens/AddEventScreen.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/screens/EventScreen.js" beforeDir="false" afterPath="$PROJECT_DIR$/screens/EventScreen.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/screens/EventsCalendarScreen.js" beforeDir="false" afterPath="$PROJECT_DIR$/screens/EventsCalendarScreen.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/screens/EventsListScreen.js" beforeDir="false" afterPath="$PROJECT_DIR$/screens/EventsListScreen.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/screens/HomeScreen.js" beforeDir="false" afterPath="$PROJECT_DIR$/screens/HomeScreen.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/screens/LoginScreen.js" beforeDir="false" afterPath="$PROJECT_DIR$/screens/LoginScreen.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/screens/ManageCalendarsScreen.js" beforeDir="false" afterPath="$PROJECT_DIR$/screens/ManageCalendarsScreen.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/screens/MultiDayScreen.js" beforeDir="false" afterPath="$PROJECT_DIR$/screens/MultiDayScreen.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/screens/NotificationScreen.js" beforeDir="false" afterPath="$PROJECT_DIR$/screens/NotificationScreen.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/screens/ProfileScreen.js" beforeDir="false" afterPath="$PROJECT_DIR$/screens/ProfileScreen.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/screens/RegisterScreen.js" beforeDir="false" afterPath="$PROJECT_DIR$/screens/RegisterScreen.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/screens/RepeatScreen.js" beforeDir="false" afterPath="$PROJECT_DIR$/screens/RepeatScreen.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/screens/SettingsScreen.js" beforeDir="false" afterPath="$PROJECT_DIR$/screens/SettingsScreen.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/ai.js" beforeDir="false" afterPath="$PROJECT_DIR$/utils/ai.js" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="ClangdSettings">
+    <option name="formatViaClangd" value="false" />
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="ProjectColorInfo"><![CDATA[{
+  "associatedIndex": 5
+}]]></component>
+  <component name="ProjectId" id="36CUfAEOphMRz3e5BmbjQp9Hjkv" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.cidr.known.project.marker": "true",
+    "RunOnceActivity.readMode.enableVisualFormatting": "true",
+    "cf.first.check.clang-format": "false",
+    "cidr.known.project.marker": "true",
+    "git-widget-placeholder": "master",
+    "kotlin-language-version-configured": "true",
+    "last_opened_file_path": "D:/TotNghiep"
+  }
+}]]></component>
+  <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="81434dc1-fe6a-43a4-9dff-6a248377f913" name="Changes" comment="" />
+      <created>1764510147630</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1764510147630</updated>
+    </task>
+    <servers />
+  </component>
+</project>
